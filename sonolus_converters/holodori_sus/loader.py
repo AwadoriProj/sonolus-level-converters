@@ -120,11 +120,14 @@ _FEVER_POINT_TYPES: dict[tuple[str, int], str] = {
 _SP_SKILL_RE = re.compile(r"^(\d{3}) (\d+)/(\d+) (\d+)")
 
 
-def load(fp: TextIO) -> Score:
-    return loads(fp.read())
+def load(fp: TextIO, *, count_bezier: bool = False) -> "Score | tuple[Score, int]":
+    return loads(fp.read(), count_bezier=count_bezier)
 
 
-def loads(data: str) -> Score:
+def loads(data: str, *, count_bezier: bool = False) -> "Score | tuple[Score, int]":
+    # count_bezier: also return how many bezier ticks were dropped (see _holodori_to_score). they
+    # never combo or score, so the note stream is identical either way; the count only exists because
+    # the live-score perfect-coefficient sum counts them (a game bug the scorer has to reproduce).
     ticks_per_beat = TICKS_PER_BEAT  # positions are fractional i/N; the file's ticks_per_beat is ignored
     music_id = ""
     wave_offset = 0.0
@@ -323,7 +326,7 @@ def loads(data: str) -> Score:
         for hold in _get_note_stream(stream):
             ghosts.append((hold, rgba))
 
-    return _holodori_to_score(
+    score, bezier_ticks = _holodori_to_score(
         taps,
         directionals,
         slides,
@@ -336,6 +339,7 @@ def loads(data: str) -> Score:
         wave_offset,
         ticks_per_beat,
     )
+    return (score, bezier_ticks) if count_bezier else score
 
 
 def _holodori_to_score(
@@ -350,8 +354,8 @@ def _holodori_to_score(
     music_id: str,
     wave_offset: float,
     ticks_per_beat: int,
-) -> Score:
-    # overlay lookup sets keyed by (tick, lane)
+) -> tuple[Score, int]:
+    # returns (score, bezier_tick_count). overlay lookup sets keyed by (tick, lane)
     criticals: set[str] = set()
     step_ignore: set[str] = (
         set()
@@ -492,6 +496,7 @@ def _holodori_to_score(
     # HOLDS. first point = start (trace-tapped head), last = end (trace), rest = relays by kind:
     #   3 LongRelayActive: visible + combo -> attach (no shape change) if step_ignore, else tick (bends)
     #   4 LongBezierPoint / 5 LongRelayDeActive: hidden, shape, no combo (bezier pull is lost in usc)
+    bezier_ticks = 0
     for hold in slides:
         if len(hold) < 2:
             continue
@@ -547,7 +552,14 @@ def _holodori_to_score(
                         speedRatio=n.speedRatio,
                     )
                 )
+            elif n.type == 4:
+                # LongBezierPoint: a hidden bezier shape control - no combo, no score, and the bezier
+                # pull is already lost in usc, so drop it from the note stream entirely. it is tallied
+                # only because the live-score perfect-coefficient sum still counts it (a game bug).
+                bezier_ticks += 1
+                continue
             else:
+                # LongRelayDeActive: an invisible tick - hidden, no combo, no score
                 slide.append(
                     SlideRelayPoint(
                         beat=beat,
@@ -593,4 +605,4 @@ def _holodori_to_score(
         waveoffset=-wave_offset,
         requests=[f"ticks_per_beat {ticks_per_beat}"],
     )
-    return Score(metadata, notes)
+    return Score(metadata, notes), bezier_ticks
