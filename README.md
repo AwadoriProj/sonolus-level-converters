@@ -20,6 +20,7 @@ Any file type listed here will have some support.
 - `untitled_sekai LevelData` - Exporting only
 - `chart_cyanvas LevelData` - Exporting only - importing returns a identical copy of the original usc, except without time signatures and heavily broken (**hold mids and guides are broken**)
 - `hololive Dreams sus` - Loading only
+- `awadori` (Our Notes chart JSON, gzipped or plain) - Loading only
 
 # Unsupported
 - `pjsekai LevelData` - Dead format, no longer supported

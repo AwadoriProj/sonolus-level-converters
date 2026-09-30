@@ -6,6 +6,7 @@ from . import pjsk
 from . import scp
 from . import bandori_sus
 from . import holodori_sus
+from . import awadori
 from .detector import detect
 from .version import __version__
 from . import utils

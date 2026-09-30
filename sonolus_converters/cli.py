@@ -3,7 +3,7 @@ import os
 
 from .detector import detect
 from .version import __version__
-from . import sus, usc, mmws, pjsk, bandori_sus
+from . import sus, usc, mmws, pjsk, bandori_sus, awadori
 
 FORMAT_NAMES = {
     "sus": "SUS",
@@ -12,6 +12,7 @@ FORMAT_NAMES = {
     "pjsk": "PJSK JSON",
     "lvd": "LevelData",
     "bandori_sus": "Bandori SUS",
+    "awadori": "Awadori",
 }
 
 OUTPUT_FORMATS = ["sus", "usc", "mmws", "pjsk", "chcy", "pysekai", "usekai"]
@@ -31,6 +32,8 @@ def _load_score(path: str, fmt: str, spec: str):
     elif fmt == "bandori_sus":
         with open(path, "r", encoding="utf-8") as f:
             return bandori_sus.load(f)
+    elif fmt == "awadori":
+        return awadori.load(path)
     elif fmt == "usc":
         with open(path, "r", encoding="utf-8") as f:
             return usc.load(f)
@@ -139,7 +142,9 @@ def _detect_or_ask(path: str) -> tuple[str, str]:
                 return fmt, spec
 
     print("Could not auto-detect or format was rejected.")
-    print("Supported input formats: sus, bandori_sus, usc, mmws, pjsk, lvd (chcy only)")
+    print(
+        "Supported input formats: sus, bandori_sus, awadori, usc, mmws, pjsk, lvd (chcy only)"
+    )
     fmt = _prompt("Enter format: ").lower()
     spec = ""
     if fmt == "lvd":
@@ -187,7 +192,7 @@ def main():
     parser.add_argument(
         "-f",
         "--format",
-        choices=["sus", "bandori_sus", "usc", "mmws", "pjsk", "lvd"],
+        choices=["sus", "bandori_sus", "awadori", "usc", "mmws", "pjsk", "lvd"],
         help="Input format (auto-detected if not specified)",
     )
     parser.add_argument(
